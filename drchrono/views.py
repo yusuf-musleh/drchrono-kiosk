@@ -3,6 +3,7 @@ from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 
+from .forms import CheckinForm
 
 def logout(request):
 	auth_logout(request)
@@ -35,5 +36,27 @@ def login_page(request):
 
 @login_required(login_url='/login_page')
 def kiosk(request):
+	checkin_form = CheckinForm()
 	content = {}
-	return render(request, 'kiosk.html')
+	content['checkin_form'] = checkin_form
+	return render(request, 'kiosk.html', content)
+
+
+
+def checkin_patient(request):
+	# if this is a POST request we need to process the form data
+	if request.method == 'POST':
+		# create a form instance and populate it with data from the request:
+		checkin_form = CheckinForm(request.POST)
+		# check whether it's valid:
+		if checkin_form.is_valid():
+			# process the data in form.cleaned_data as required
+			# ...
+			# redirect to a new URL:
+			return HttpResponse('ok')
+
+		# should return jsonresponse
+		print 'right here'
+		return render(request, 'kiosk.html', {'checkin_form': checkin_form})
+	checkin_form = CheckinForm()
+	return render(request, 'kiosk.html', {'checkin_form': checkin_form})

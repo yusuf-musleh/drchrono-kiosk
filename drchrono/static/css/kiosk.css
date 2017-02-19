@@ -5,13 +5,16 @@ body{
   align-items:center;
   background: #5BA337;
   flex-direction: column;
-  color: white;
   font-family: Tahoma;
   margin-top: 100px;
 }
 
 h3{
   margin-top: -20px;
+}
+
+h1, h3{
+  color: white;
 }
 
 .button{
@@ -65,4 +68,6 @@ span{
 	display: none;
 }
 
-
+#checkin_patient_form{
+  width: 300px;
+}

@@ -15,7 +15,26 @@
 			<h1>Welcome to Dr. {{ user.last_name }}'s Clinic</h1>
 			<br>
 			<h3>Please enter your details to check-in</h3>
+			<hr>
+
+
 		</div>
+
+
+		<form id='checkin_patient_form' action="{% url 'checkin_patient' %}" method="post">
+		    {% csrf_token %}
+
+		    {% for field in checkin_form %}
+			    <div class="form-group">
+			        {{ field.errors }}
+			        {{ field.label_tag }}
+			        {{ field }}
+			    </div>
+			{% endfor %}
+
+			<button type="submit" class="btn btn-default">Submit</button>
+		</form>
+
 
 
 	<script src="{% static 'js/jquery.js' %}"></script>

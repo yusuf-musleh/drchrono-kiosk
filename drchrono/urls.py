@@ -16,4 +16,5 @@ urlpatterns = [
     url(r'', include('social.apps.django_app.urls', namespace='social')),
 
     url(r'^kiosk/', views.kiosk, name='kiosk'),
+    url(r'^checkin_patient/', views.checkin_patient, name='checkin_patient'),
 ]
