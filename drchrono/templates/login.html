@@ -1,0 +1,41 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+
+	<head>
+	    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+        <link href="{% static 'css/login.css' %}" rel="stylesheet">
+	</head>
+
+
+  	<body>
+
+	  	{% if user.is_authenticated %}
+			<p>Hello, {{ user.username }}!</p>
+			<br>
+			<a href="/logout">Logout</a>
+		{% else %}
+			<!-- <a href="{% url 'social:begin' 'drchrono' %}">Login with drchrono</a> -->
+			<div style="text-align: center">
+				<h1>Patient Check-in Kiosk</h1>
+				<br>
+				<h3>Get informed when your patients check-in for their appoinments and see how long they waited!</h3>
+			</div>
+			<br>
+			<a class="button" href="{% url 'social:begin' 'drchrono' %}">
+		  		<span class="away"><img style="max-width: 150px" src="{% static 'img/drchrono-login-logo.png' %}"></span>
+		  		<span class="over">Sign in with drchrono</span>
+			</a>
+		{% endif %}
+
+	<!--     <a href="{% url 'social:begin' 'drchrono' %}">
+	      drchrono OAuth
+	    </a> -->
+
+
+	<script src="{% static 'js/jquery.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+  	</body>
+</html>
+
+

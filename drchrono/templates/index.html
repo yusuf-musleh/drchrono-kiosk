@@ -1,8 +1,129 @@
+{% load staticfiles %}
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <title>Dr Kiosk App</title>
+
+    <!-- Bootstrap core CSS -->
+	<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="{% static 'css/index.css' %}" rel="stylesheet">
+
+
+  </head>
+
   <body>
-    <a href="{% url 'social:begin' 'drchrono' %}">
-      drchrono OAuth
-    </a>
+
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-default navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Patient Check-in Kiosk</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+          	<li class="active"><a href="/kiosk">Enter Kiosk Mode</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li class="active"><a href="/logout">Logout <span class="sr-only">(current)</span></a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container">
+
+
+  	  	{% if user.is_authenticated %}
+	      	<div id='message_success'>
+	      	</div>
+			<h2>Welcome Dr. {{ user.last_name }}! </h2>
+			<br>
+			<div style='width:350px'>
+				<h3>Average Wait Time</h3>
+				<hr>
+			</div>
+			{% if birthdays_today %}
+				{% for p in birthdays_today %}
+					<div class='row'>
+						<div class="col-md-9">
+							<p><b>Name:</b> {{ p.first_name }} {{ p.last_name }} </p>
+							<p><b>Date of Birth:</b> {{ p.date_of_birth }}</p>
+						</div>
+						<div class="col-md-2">
+							<button type="button" class="btn btn-success" data-toggle="modal" data-target="#myModal" data-doctor="{{ user.first_name }} {{ user.last_name }}" data-patient="{{ p.first_name }}" data-email="{{ p.email }}" >Wish {{ p.first_name }} a Happy Birthday!</button>
+						</div>
+					</div>
+					<hr>
+					{% endfor %}
+			{% else %}
+				<h5>Not enough data!</h5>
+			{% endif %}
+			<div style="width: 350px">
+				<h3>Checked-in Patients</h3>
+				<hr>
+			</div>
+			{% if birthdays_before or birthdays_after or no_birthdays %}
+				{% for p in birthdays_after %}
+					<div class='row'>
+						<div class="col-md-9">
+							<p><b>Name:</b> {{ p.1.first_name }} {{ p.1.last_name }} </p>
+							<p><b>Date of Birth:</b> {{ p.1.date_of_birth }}</p>
+						</div>
+					</div>
+					<hr>
+				{% endfor %}
+				{% for p in birthdays_before %}
+					<div class='row'>
+						<div class="col-md-9">
+							<p><b>Name:</b> {{ p.1.first_name }} {{ p.1.last_name }} </p>
+							<p><b>Date of Birth:</b> {{ p.1.date_of_birth }}</p>
+						</div>
+					</div>
+					<hr>
+				{% endfor %}
+				{% for p in no_birthdays %}
+					<div class='row'>
+						<div class="col-md-9">
+							<p><b>Name:</b> {{ p.first_name }} {{ p.last_name }} </p>
+							<p><b>Date of Birth:</b> {{ p.date_of_birth }}</p>
+						</div>
+					</div>
+					<hr>
+				{% endfor %}
+
+			{% else %}
+				<h5>No patients checked-in!</h5>
+			{% endif %}
+
+		{% else %}
+			<h5>Please login to drchrono!</h5>
+
+
+		{% endif %}
+
+    </div> <!-- /container -->
+
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+	<script src="{% static 'js/jquery.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'js/script.js' %}" ></script>
+
   </body>
 </html>

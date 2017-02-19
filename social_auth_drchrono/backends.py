@@ -1,6 +1,6 @@
 import os
 from social.backends.oauth import BaseOAuth2
-
+import requests
 
 class drchronoOAuth2(BaseOAuth2):
     """
@@ -23,6 +23,24 @@ class drchronoOAuth2(BaseOAuth2):
         """
         Return user details from drchrono account
         """
+
+        access_token = response.get('access_token')
+        headers = {
+            'Authorization': 'Bearer ' + access_token,
+        }
+
+        # Getting logged-in doctor details
+        doctors_url = 'https://drchrono.com/api/doctors'
+        while doctors_url:
+            data = requests.get(doctors_url, headers=headers).json()
+
+            for doc in data['results']:
+                if doc['id'] == response.get('doctor'):
+                    return {'username': response.get('username'), 'first_name': doc['first_name'], 'last_name': doc['last_name'], 'email': doc['email'], }
+
+            doctors_url = data['next'] # A JSON null on the last page
+
+
         return {'username': response.get('username'),}
 
     def user_data(self, access_token, *args, **kwargs):

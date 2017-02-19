@@ -52,6 +52,10 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.security.SecurityMiddleware',
 )
 
+SOCIAL_AUTH_DRCHRONO_KEY = "IqwR6RtGjrgZFOokG7wF7hcuQTwViwkLWl4VDMBG"
+SOCIAL_AUTH_DRCHRONO_SECRET = "2IPOnZqdEd26V5kx9EcRew9vLX8Dwwu9IpuwrL1Tu5DscZjFt13EXFSHrbQc1gaVtHm22eWTkj6PF3bM1Rn1K5BQ11l5fE9VAELX1Iz5kHjmwurD3EfPkcAzVwcCuV7n"
+LOGIN_REDIRECT_URL = "/"
+
 AUTHENTICATION_BACKENDS = (
     'social_auth_drchrono.backends.drchronoOAuth2',
     'django.contrib.auth.backends.ModelBackend',
