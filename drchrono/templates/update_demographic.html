@@ -4,7 +4,7 @@
 
 	<head>
 	    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
-        <link href="{% static 'css/kiosk.css' %}" rel="stylesheet">
+        <link href="{% static 'css/demographics.css' %}" rel="stylesheet">
 	</head>
 
 
@@ -13,16 +13,16 @@
 		<div style="text-align: center">
 			<h1>Welcome to Dr. {{ user.last_name }}'s Clinic</h1>
 			<br>
-			<h3>Please enter your details to check-in</h3>
+			<h3>Would you like to update any of your information?</h3>
 			<hr>
 
 		</div>
 
 
-		<form id='checkin_patient_form' action="{% url 'checkin_patient' %}" method="post">
+		<form id='update_demographics_form' action="{% url 'update_demographics' %}" method="post">
 		    {% csrf_token %}
 
-		    {% for field in checkin_form %}
+		    {% for field in demographics_form %}
 		    	<strong style="color:#b30505">{{ field.errors.as_text }}</strong>
 			    <div class="form-group">
 			        {{ field.label_tag }}
@@ -37,7 +37,6 @@
 
 	<script src="{% static 'js/jquery.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
-    <script src="{% static 'js/kiosk.js' %}"></script>
   	</body>
 </html>
 
