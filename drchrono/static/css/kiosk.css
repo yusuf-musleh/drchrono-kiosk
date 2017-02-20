@@ -68,6 +68,10 @@ span{
 	display: none;
 }
 
-#checkin_patient_form{
+form{
   width: 300px;
+}
+
+label{
+  color: white;
 }
