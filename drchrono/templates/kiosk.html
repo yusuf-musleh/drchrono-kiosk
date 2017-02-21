@@ -9,7 +9,7 @@
 
 
   	<body>
-
+  		{% block content %}
 		<div style="text-align: center">
 			<h1>Welcome to Dr. {{ user.last_name }}'s Clinic</h1>
 			<br>
@@ -32,12 +32,12 @@
 
 			<button type="submit" class="btn btn-default">Submit</button>
 		</form>
+		{% endblock content %}
 
 
 
 	<script src="{% static 'js/jquery.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
-    <script src="{% static 'js/kiosk.js' %}"></script>
   	</body>
 </html>
 

@@ -1,44 +1,36 @@
-{% load staticfiles %}
-<!DOCTYPE html>
-<html>
 
-	<head>
-	    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
-        <link href="{% static 'css/kiosk.css' %}" rel="stylesheet">
-	</head>
+{% extends 'kiosk.html' %}
 
+{% block content %}
+	<div style="text-align: center">
+		<h1>Welcome to Dr. {{ user.last_name }}'s Clinic</h1>
+		<br>
+		<h3>Would you like to update any of your information?</h3>
+		<hr>
 
-  	<body>
-
-		<div style="text-align: center">
-			<h1>Welcome to Dr. {{ user.last_name }}'s Clinic</h1>
-			<br>
-			<h3>Would you like to update any of your information?</h3>
-			<hr>
-
-		</div>
+	</div>
 
 
-		<form id='update_demographics_form' action="{% url 'update_demographics' %}" method="post">
-		    {% csrf_token %}
+	<form id='update_demographics_form' action="{% url 'update_demographics' %}" method="post">
+	    {% csrf_token %}
 
-		    {% for field in demographics_form %}
-		    	<strong style="color:#b30505">{{ field.errors.as_text }}</strong>
-			    <div class="form-group">
-			        {{ field.label_tag }}
-			        {{ field }}
-			    </div>
-			{% endfor %}
+	    {% for field in demographics_form.visible_fields %}
+	    	<strong style="color:#b30505">{{ field.errors.as_text }}</strong>
+		    <div class="form-group">
+		        {{ field.label_tag }}
+		        {{ field }}
+		    </div>
+		{% endfor %}
+		{% for field in demographics_form.hidden_fields %}
+			{{ field }}
+		{% endfor %}
 
-			<button type="submit" class="btn btn-default">Update</button>
-			<button class="btn btn-default">Skip</button>
-		</form>
+		<button type="submit" class="btn btn-default">Update</button>
+
+	</form>
 
 
 
-	<script src="{% static 'js/jquery.js' %}"></script>
-    <script src="{% static 'js/bootstrap.min.js' %}"></script>
-  	</body>
-</html>
+{% endblock content %}
 
 

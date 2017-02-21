@@ -29,3 +29,4 @@ class DemographicsForm(forms.Form):
 	address = forms.CharField(required=False, label='Address', widget=forms.TextInput(attrs={'class': 'form-control'}))
 	emg_contact_phone = forms.RegexField(required=False, regex='^((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}$', label='Emergency Cell Phone', error_messages={'invalid': 'Must enter valid US phone number in the format (999) 999-9999'}, widget=forms.TextInput(attrs={'class': 'form-control'}))
 	emg_contact_name = forms.CharField(required=False, max_length=100, label='Emergency Contact Name', widget=forms.TextInput(attrs={'class': 'form-control'}))
+	initial_form_data = forms.CharField(required=False, widget=forms.HiddenInput())

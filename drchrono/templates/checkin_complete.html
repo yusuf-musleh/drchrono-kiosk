@@ -1,0 +1,14 @@
+
+{% extends 'kiosk.html' %}
+
+{% block content %}
+
+	<div style="text-align: center">
+		<h1>You are checked in!</h1>
+		<br>
+		<h3>Dr. {{ user.last_name }} will call you in shortly.</h3>
+		<hr>
+	</div>
+	<button type='button' onclick="location.href='{% url 'checkin_patient' %}'" class="btn btn-default">Done</button>
+
+{% endblock content %}

@@ -44,7 +44,9 @@ def get_patient_info(first_name, last_name, ssn, access_token):
 	}
 	patients_url = 'https://drchrono.com/api/patients?first_name=' + first_name + '&last_name=' + last_name
 	while patients_url:
-		data = requests.get(patients_url, headers=headers).json()
+		data = requests.get(patients_url, headers=headers)
+		# print data.text
+		data = data.json()
 		for patient in data['results']: # find patient matching name and ssn
 			if patient['first_name'] == first_name and patient['last_name'] == last_name and patient['social_security_number'] == ssn:
 				return patient
@@ -87,7 +89,9 @@ def checkin_patient(request):
 			patient_info = get_patient_info(first_name, last_name, ssn, access_token)
 			if patient_info:
 				get_todays_appointments(access_token)
-				demographics_form = DemographicsForm(initial={'cell_phone': patient_info['cell_phone'], 'email': patient_info['email'], 'zip_code': patient_info['zip_code'], 'address': patient_info['address'], 'emg_contact_phone': patient_info['emergency_contact_phone'], 'emg_contact_name': patient_info['emergency_contact_name']})
+				initial_data = {'cell_phone': patient_info['cell_phone'], 'email': patient_info['email'], 'zip_code': patient_info['zip_code'], 'address': patient_info['address'], 'emg_contact_phone': patient_info['emergency_contact_phone'], 'emg_contact_name': patient_info['emergency_contact_name']}
+				initial_data['initial_form_data'] = json.dumps(initial_data)
+				demographics_form = DemographicsForm(initial=initial_data)
 				return render(request, 'update_demographics.html', {'demographics_form': demographics_form})
 			else: # no appointments found for given name and ssn
 				checkin_form.add_error('first_name', 'You have no appointments today, please double check your name and ssn')
@@ -104,10 +108,23 @@ def checkin_patient(request):
 def update_demographics(request):
 	# if this is a POST request we need to process the form data
 	if request.method == 'POST':
-		demographics_form = DemographicsForm(request.POST)
+		initial_data = json.loads(request.POST['initial_form_data'])
+		initial_data['initial_form_data'] = json.dumps(initial_data)
+		demographics_form = DemographicsForm(request.POST, initial=initial_data)
 		if demographics_form.is_valid():
+			if demographics_form.has_changed():
+				print 'something changed'
+				print "The following fields changed: %s" % ", ".join(demographics_form.changed_data)
+			else:
+				print 'nothing changed'
+				return render(request, 'checkin_complete.html')
 			return HttpResponse('ok')
 		return render(request, 'update_demographics.html', {'demographics_form': demographics_form})
 	else: # if GET request render checkin page
 		checkin_form = CheckinForm()
 		return render(request, 'kiosk.html', {'checkin_form': checkin_form})
+
+
+@login_required(login_url='/login_page')
+def checkin_complete(request):
+	return render(request, 'checkin_complete.html')
