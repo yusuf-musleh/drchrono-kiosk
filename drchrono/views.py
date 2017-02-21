@@ -89,7 +89,7 @@ def checkin_patient(request):
 			patient_info = get_patient_info(first_name, last_name, ssn, access_token)
 			if patient_info:
 				get_todays_appointments(access_token)
-				initial_data = {'cell_phone': patient_info['cell_phone'], 'email': patient_info['email'], 'zip_code': patient_info['zip_code'], 'address': patient_info['address'], 'emg_contact_phone': patient_info['emergency_contact_phone'], 'emg_contact_name': patient_info['emergency_contact_name']}
+				initial_data = {'patient_id': patient_info['id'], 'cell_phone': patient_info['cell_phone'], 'email': patient_info['email'], 'zip_code': patient_info['zip_code'], 'address': patient_info['address'], 'emergency_contact_phone': patient_info['emergency_contact_phone'], 'emergency_contact_name': patient_info['emergency_contact_name']}
 				initial_data['initial_form_data'] = json.dumps(initial_data)
 				demographics_form = DemographicsForm(initial=initial_data)
 				return render(request, 'update_demographics.html', {'demographics_form': demographics_form})
@@ -104,6 +104,29 @@ def checkin_patient(request):
 	return render(request, 'kiosk.html', {'checkin_form': checkin_form})
 
 
+def submit_update(demographics_form, access_token):
+
+	headers = {
+		'Authorization': 'Bearer ' + access_token,
+	}
+	data = {}
+	changed_fields = demographics_form.changed_data
+	for field in changed_fields:
+		data[field] = demographics_form.cleaned_data[field]
+
+	url = 'https://drchrono.com/api/patients/' + str(demographics_form.cleaned_data['patient_id'])
+
+	r = requests.patch(url, data=data, headers=headers)
+
+	print r.status_code, r.text
+
+	if r.status_code == 204: # HTTP 204 patch successful
+		return True
+
+ 	# patch failed
+	return False
+
+
 @login_required(login_url='/login_page')
 def update_demographics(request):
 	# if this is a POST request we need to process the form data
@@ -113,8 +136,17 @@ def update_demographics(request):
 		demographics_form = DemographicsForm(request.POST, initial=initial_data)
 		if demographics_form.is_valid():
 			if demographics_form.has_changed():
-				print 'something changed'
 				print "The following fields changed: %s" % ", ".join(demographics_form.changed_data)
+				# fetching doctor's acccess_token
+				access_token = request.user.social_auth.get(provider='drchrono').extra_data['access_token']
+				if submit_update(demographics_form, access_token): # api update call successful
+
+					# inform doctor patient arrived and checked-in
+
+					return render(request, 'checkin_complete.html')
+
+				demographics_form.add_error('cell_phone', 'Failed to update your data, try again')
+				return render(request, 'update_demographics.html', {'demographics_form': demographics_form})
 			else:
 				print 'nothing changed'
 				return render(request, 'checkin_complete.html')
@@ -124,7 +156,3 @@ def update_demographics(request):
 		checkin_form = CheckinForm()
 		return render(request, 'kiosk.html', {'checkin_form': checkin_form})
 
-
-@login_required(login_url='/login_page')
-def checkin_complete(request):
-	return render(request, 'checkin_complete.html')
