@@ -24,6 +24,7 @@ class CheckinForm(forms.Form):
 
 class DemographicsForm(forms.Form):
 	patient_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
+	appointment_id = forms.CharField(required=False, widget=forms.HiddenInput())
 	cell_phone = forms.RegexField(required=False, regex='^((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}$', label='Cell Phone', error_messages={'invalid': 'Must enter valid US phone number in the format (999) 999-9999'}, widget=forms.TextInput(attrs={'class': 'form-control'}))
 	email = forms.EmailField(required=False, label='Email', widget=forms.EmailInput(attrs={'class': 'form-control'}))
 	zip_code = forms.RegexField(required=False, regex='^\d{5}$', label='Zip Code', error_messages={'invalid': 'Enter a valid zip-code in the format 00000'}, widget=forms.TextInput(attrs={'class': 'form-control'}))

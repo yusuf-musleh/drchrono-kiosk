@@ -56,15 +56,15 @@
 				<h3>Average Wait Time</h3>
 				<hr>
 			</div>
-			{% if birthdays_today %}
-				{% for p in birthdays_today %}
+			{% if average_appointment_data %}
+				{% for aad in average_appointment_data %}
 					<div class='row'>
 						<div class="col-md-9">
 							<p><b>Name:</b> {{ p.first_name }} {{ p.last_name }} </p>
 							<p><b>Date of Birth:</b> {{ p.date_of_birth }}</p>
 						</div>
 						<div class="col-md-2">
-							<button type="button" class="btn btn-success" data-toggle="modal" data-target="#myModal" data-doctor="{{ user.first_name }} {{ user.last_name }}" data-patient="{{ p.first_name }}" data-email="{{ p.email }}" >Wish {{ p.first_name }} a Happy Birthday!</button>
+<!-- 							<button type="button" class="btn btn-success" data-toggle="modal" data-target="#myModal" data-doctor="{{ user.first_name }} {{ user.last_name }}" data-patient="{{ p.first_name }}" data-email="{{ p.email }}" >Wish {{ p.first_name }} a Happy Birthday!</button> -->
 						</div>
 					</div>
 					<hr>
@@ -73,40 +73,39 @@
 				<h5>Not enough data!</h5>
 			{% endif %}
 			<div style="width: 350px">
-				<h3>Checked-in Patients</h3>
+				<h3>Today's Appointments</h3>
 				<hr>
 			</div>
-			{% if birthdays_before or birthdays_after or no_birthdays %}
-				{% for p in birthdays_after %}
+			{% if todays_appointments %}
+				{% for appointment in todays_appointments %}
 					<div class='row'>
-						<div class="col-md-9">
-							<p><b>Name:</b> {{ p.1.first_name }} {{ p.1.last_name }} </p>
-							<p><b>Date of Birth:</b> {{ p.1.date_of_birth }}</p>
+						<div class="col-md-6">
+							<p><b>Patient Name:</b> {{ appointment.patient.first_name }} {{ appointment.patient.last_name }} </p>
+							<p><b>Schedualed at:</b> {{ appointment.scheduled_time }}</p>
 						</div>
-					</div>
-					<hr>
-				{% endfor %}
-				{% for p in birthdays_before %}
-					<div class='row'>
-						<div class="col-md-9">
-							<p><b>Name:</b> {{ p.1.first_name }} {{ p.1.last_name }} </p>
-							<p><b>Date of Birth:</b> {{ p.1.date_of_birth }}</p>
-						</div>
-					</div>
-					<hr>
-				{% endfor %}
-				{% for p in no_birthdays %}
-					<div class='row'>
-						<div class="col-md-9">
-							<p><b>Name:</b> {{ p.first_name }} {{ p.last_name }} </p>
-							<p><b>Date of Birth:</b> {{ p.date_of_birth }}</p>
+						{% if appointment.status == 'Arrived' %}
+						<div id='{{ appointment.appointment_id }}_arrived'>
+						{% else %}
+						<div id='{{ appointment.appointment_id }}_arrived' style="visibility: hidden;">
+						{% endif %}
+							<div class="col-md-3">
+								<div class='time_diff' id='min_since_arrival' style="display: none">{{ appointment.arrival_time|timesince }}</div>
+								<div class="alert alert-success" style="text-align: center">
+								  	<strong>Patient Arrived!</strong>
+									<div id="timer_{{ appointment.appointment_id }}" class="badge">00:00</div>
+								</div>
+
+							</div>
+							<div class="col-md-2">
+								<button type="button" class="btn btn-success">See Patient</button>
+							</div>
 						</div>
 					</div>
 					<hr>
 				{% endfor %}
 
 			{% else %}
-				<h5>No patients checked-in!</h5>
+				<h5>No Appointments schedualed today!</h5>
 			{% endif %}
 
 		{% else %}
@@ -123,7 +122,9 @@
     ================================================== -->
 	<script src="{% static 'js/jquery.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
-    <script src="{% static 'js/script.js' %}" ></script>
+    <script src="{% static 'js/timer.jquery.min.js' %}"></script>
+    <script src="{% static 'js/index.js' %}"></script>
+
 
   </body>
 </html>
