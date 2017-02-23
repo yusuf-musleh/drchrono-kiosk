@@ -6,12 +6,21 @@ from django.http import HttpResponse
 from .forms import CheckinForm, DemographicsForm
 from drchrono.models import Patient, Appointment
 
-import json, requests, datetime
+import json, requests, datetime, pytz
 
+from dateutil import parser
+
+from django.db.models import Q
 
 def logout(request):
 	auth_logout(request)
 	return redirect('/login_page')
+
+
+def get_datetime_in_doctor_timezone(request):
+	user_timezone = request.COOKIES.get('tzname_from_user', 'UTC')
+	return datetime.datetime.now(pytz.timezone(user_timezone))
+
 
 def get_doctors_patients(headers):
 	patients = []
@@ -35,9 +44,8 @@ def get_doctors_patients(headers):
 
 	return patients
 
-def get_all_todays_appointments(headers):
+def get_all_todays_appointments(headers, today):
 	appointments = []
-	today = datetime.date.today()
 	appointments_url = 'https://drchrono.com/api/appointments?date=' + str(today)
 	while appointments_url:
 		data = requests.get(appointments_url, headers=headers)
@@ -48,7 +56,10 @@ def get_all_todays_appointments(headers):
 			appointment_obj, created = Appointment.objects.get_or_create(appointment_id=appointment['id'], patient=Patient.objects.get(patient_id=appointment['patient']), scheduled_time=appointment['scheduled_time'], doctor_id=appointment['doctor'])
 			if created:
 				appointment_obj.time_waited = None
-				appointment_obj.save()
+			appointment_obj.status = appointment['status']
+			print appointment_obj.status
+			appointment_obj.save()
+			appointment_obj.scheduled_time = parser.parse(appointment['scheduled_time'])
 
 			appointments.append(appointment_obj)
 
@@ -56,17 +67,34 @@ def get_all_todays_appointments(headers):
 	return appointments
 
 
+def get_average_wait_time(doctor_id):
+	completed_appointments = Appointment.objects.filter((Q(status='Complete') | Q(status='In Session')) & Q(doctor_id=doctor_id))
+	if not completed_appointments:
+		return None
+	completed_appointments = map(lambda x: x.time_waited, completed_appointments)
+
+	print completed_appointments
+	avg = sum(completed_appointments, datetime.timedelta()) / len(completed_appointments)
+	avg = str(avg).split('.')[0]
+	print 'avg', avg
+	return avg
+
+
 @login_required(login_url='/login_page')
 def index(request):
 
-	# user_timezone = request.COOKIES.get('tzname_from_user', 'UTC')
+	today = get_datetime_in_doctor_timezone(request)
 
 	headers = build_headers(request)
 	patients = get_doctors_patients(headers)
-	todays_appointments = get_all_todays_appointments(headers)
-
-
+	todays_appointments = get_all_todays_appointments(headers, today)
 	content = {}
+	if todays_appointments:
+		doctor_id = todays_appointments[0].doctor_id
+		average_wait_time = get_average_wait_time(doctor_id)
+		if average_wait_time:
+			content['average_wait_time'] = average_wait_time
+
 	content['todays_appointments'] = todays_appointments
 
 	return render(request, 'index.html', content)
@@ -102,8 +130,7 @@ def get_patient_info(first_name, last_name, ssn, headers):
 	return None
 
 
-def get_patients_appointment_today(patient_id, headers):
-	today = datetime.date.today()
+def get_patients_appointment_today(patient_id, headers, today):
 	appointments_url = "https://drchrono.com/api/appointments?date=" + str(today) + "&patient=" + str(patient_id)
 	# appointments_url = "https://drchrono.com/api/appointments?date=" + str(today)
 
@@ -130,11 +157,11 @@ def checkin_patient(request):
 			ssn = checkin_form.cleaned_data['SSN'].strip()
 
 			print first_name, last_name, ssn
-
+			today = get_datetime_in_doctor_timezone(request)
 			headers = build_headers(request)
 			patient_info = get_patient_info(first_name, last_name, ssn, headers)
 			if patient_info:
-				patients_appointment = get_patients_appointment_today(patient_info['id'], headers)
+				patients_appointment = get_patients_appointment_today(patient_info['id'], headers, today)
 				if patients_appointment:
 					# keeping track of initial data to check for any changes
 					initial_data = { 'patient_id': patient_info['id'],
@@ -180,9 +207,9 @@ def submit_update(demographics_form, headers):
  	# patch failed
 	return False
 
-def set_appointment_to_arrived(appointment_id, headers):
+def change_appointment_status(appointment_id, headers, status):
 	data = {}
-	data['status'] = "Arrived"
+	data['status'] = status
 	url = "https://drchrono.com/api/appointments/" + str(appointment_id)
 	r = requests.patch(url, data=data, headers=headers)
 
@@ -215,22 +242,62 @@ def update_demographics(request):
 					return render(request, 'update_demographics.html', {'demographics_form': demographics_form})
 
 			# change appointment status to arrived both locally and drchrono api
-			if not set_appointment_to_arrived(demographics_form.cleaned_data['appointment_id'], headers):
+			if not change_appointment_status(demographics_form.cleaned_data['appointment_id'], headers, "Arrived"):
 				demographics_form.add_error('cell_phone', 'Failed to change appointment status, please try again')
 				return render(request, 'update_demographics.html', {'demographics_form': demographics_form})
+
+			patients_arrived_before = len(Appointment.objects.filter(Q(status='Arrived') | Q(status='In Session')))
 
 			# change appointment status locally
 			appointment_obj = Appointment.objects.get(appointment_id=demographics_form.cleaned_data['appointment_id'])
 			appointment_obj.status = "Arrived"
-			appointment_obj.arrival_time = datetime.datetime.now()
+			appointment_obj.arrival_time = get_datetime_in_doctor_timezone(request)
+			print 'before being saved', appointment_obj.arrival_time
 			appointment_obj.save()
+
+			content = {'patients_arrived_before': patients_arrived_before}
 
 			# inform doctor that patient arrived and checked-in
 			# ...
-			return render(request, 'checkin_complete.html')
+			return render(request, 'checkin_complete.html', content)
 
 		return render(request, 'update_demographics.html', {'demographics_form': demographics_form})
 	else: # if GET request render checkin page
 		checkin_form = CheckinForm()
 		return render(request, 'kiosk.html', {'checkin_form': checkin_form})
 
+
+def call_in_patient(request):
+	if request.method == 'POST':
+
+		appointment_id = request.POST['appointment_id']
+		datetime_patient_saw_doc = request.POST['current_date_time']
+		datetime_patient_saw_doc = parser.parse(datetime_patient_saw_doc)
+
+		appointment = Appointment.objects.get(appointment_id=appointment_id)
+		appointment.status = "In Session"
+
+		delta = datetime_patient_saw_doc - appointment.arrival_time
+
+		appointment.time_waited = delta
+		appointment.save()
+
+		headers = build_headers(request)
+		change_appointment_status(appointment_id, headers, "In Session")
+
+
+		return HttpResponse('ok')
+
+
+def appointment_completed(request):
+	if request.method == 'POST':
+		appointment_id = request.POST['appointment_id']
+		print appointment_id
+		appointment = Appointment.objects.get(appointment_id=appointment_id)
+		appointment.status = "Complete"
+		appointment.save()
+
+		headers = build_headers(request)
+		change_appointment_status(appointment_id, headers, 'Complete')
+
+		return HttpResponse('ok')

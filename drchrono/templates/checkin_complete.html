@@ -6,6 +6,12 @@
 	<div style="text-align: center">
 		<h1>You are checked in!</h1>
 		<br>
+		{% if patients_arrived_before == 1 %}
+		<h3>There {{ patients_arrived_before }} patient ahead of you.</h3>
+		{% else %}
+		<h3>There are {{ patients_arrived_before }} patients ahead of you.</h3>
+		{% endif %}
+		<br>
 		<h3>Dr. {{ user.last_name }} will call you in shortly.</h3>
 		<hr>
 	</div>

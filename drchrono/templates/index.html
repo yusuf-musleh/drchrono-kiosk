@@ -56,19 +56,13 @@
 				<h3>Average Wait Time</h3>
 				<hr>
 			</div>
-			{% if average_appointment_data %}
-				{% for aad in average_appointment_data %}
-					<div class='row'>
-						<div class="col-md-9">
-							<p><b>Name:</b> {{ p.first_name }} {{ p.last_name }} </p>
-							<p><b>Date of Birth:</b> {{ p.date_of_birth }}</p>
-						</div>
-						<div class="col-md-2">
-<!-- 							<button type="button" class="btn btn-success" data-toggle="modal" data-target="#myModal" data-doctor="{{ user.first_name }} {{ user.last_name }}" data-patient="{{ p.first_name }}" data-email="{{ p.email }}" >Wish {{ p.first_name }} a Happy Birthday!</button> -->
-						</div>
+			{% if average_wait_time %}
+				<div class='row'>
+					<div class="col-md-9">
+						<h4> {{ average_wait_time }} </h4>
 					</div>
-					<hr>
-					{% endfor %}
+				</div>
+				<hr>
 			{% else %}
 				<h5>Not enough data!</h5>
 			{% endif %}
@@ -81,25 +75,46 @@
 					<div class='row'>
 						<div class="col-md-6">
 							<p><b>Patient Name:</b> {{ appointment.patient.first_name }} {{ appointment.patient.last_name }} </p>
-							<p><b>Schedualed at:</b> {{ appointment.scheduled_time }}</p>
+							<p><b>Schedualed at:</b> {{ appointment.scheduled_time|date:"D, M d Y, P" }}</p>
 						</div>
 						{% if appointment.status == 'Arrived' %}
 						<div id='{{ appointment.appointment_id }}_arrived'>
-						{% else %}
-						<div id='{{ appointment.appointment_id }}_arrived' style="visibility: hidden;">
-						{% endif %}
 							<div class="col-md-3">
 								<div class='time_diff' id='min_since_arrival' style="display: none">{{ appointment.arrival_time|timesince }}</div>
-								<div class="alert alert-success" style="text-align: center">
+								<div id='status_{{ appointment.appointment_id }}' class="alert alert-success" style="text-align: center">
 								  	<strong>Patient Arrived!</strong>
 									<div id="timer_{{ appointment.appointment_id }}" class="badge">00:00</div>
 								</div>
 
 							</div>
 							<div class="col-md-2">
-								<button type="button" class="btn btn-success">See Patient</button>
+								<button id="btn_{{ appointment.appointment_id }}" type="button" class="btn btn-success" onclick="call_in_patient('{{ appointment.appointment_id }}', '{{ csrf_token }}')">See Patient</button>
 							</div>
 						</div>
+						{% elif appointment.status == 'In Session' %}
+						<div id='{{ appointment.appointment_id }}_arrived'>
+							<div class="col-md-3">
+								<div id='status_{{ appointment.appointment_id }}' class="alert alert-info" style="text-align: center">
+								  	<strong>In Progress</strong>
+								</div>
+
+							</div>
+							<div class="col-md-2">
+								<button id="btn_{{ appointment.appointment_id }}" type="button" class="btn btn-info" onclick="appointment_completed('{{ appointment.appointment_id }}', '{{ csrf_token }}')">Done</button>
+							</div>
+						</div>
+						{% elif appointment.status == 'Complete' %}
+						<div id='{{ appointment.appointment_id }}_arrived'>
+							<div class="col-md-3">
+								<div id='status_{{ appointment.appointment_id }}' class="alert alert-warning" style="text-align: center">
+								  	<strong>Completed</strong>
+								</div>
+
+							</div>
+						</div>
+
+						{% endif %}
+
 					</div>
 					<hr>
 				{% endfor %}
@@ -123,6 +138,8 @@
 	<script src="{% static 'js/jquery.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
     <script src="{% static 'js/timer.jquery.min.js' %}"></script>
+    <script src="{% static 'js/jstz.min.js' %}"></script>
+    <script src="{% static 'js/js.cookie.js' %}"></script>
     <script src="{% static 'js/index.js' %}"></script>
 
 
