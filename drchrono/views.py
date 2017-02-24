@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 
 from .forms import CheckinForm, DemographicsForm
-from drchrono.models import Patient, Appointment, Arrival
+from drchrono.models import Doctor, Patient, Appointment, Arrival
 
 import json, requests, datetime, pytz
 
@@ -44,19 +44,20 @@ def get_doctors_patients(headers):
 
 	return patients
 
-def get_all_todays_appointments(headers, today):
+def get_all_todays_appointments(headers, today, doctor_id):
 	appointments = []
-	appointments_url = 'https://drchrono.com/api/appointments?date=' + str(today)
+	appointments_url = 'https://drchrono.com/api/appointments?doctor=' + str(doctor_id) + '&date=' + str(today)
 	while appointments_url:
 		data = requests.get(appointments_url, headers=headers)
 		data = data.json()
 		for appointment in data['results']:
 			# create an appointment to add to db if not found
 
-			appointment_obj, created = Appointment.objects.get_or_create(appointment_id=appointment['id'], patient=Patient.objects.get(patient_id=appointment['patient']), scheduled_time=appointment['scheduled_time'], doctor_id=appointment['doctor'])
+			appointment_obj, created = Appointment.objects.get_or_create(appointment_id=appointment['id'], patient=Patient.objects.get(patient_id=appointment['patient']), doctor_id=appointment['doctor'])
 			if created:
 				appointment_obj.time_waited = None
 			appointment_obj.status = appointment['status']
+			appointment_obj.scheduled_time = appointment['scheduled_time']
 			appointment_obj.save()
 			appointment_obj.scheduled_time = parser.parse(appointment['scheduled_time'])
 
@@ -70,27 +71,41 @@ def get_average_wait_time(doctor_id):
 	completed_appointments = Appointment.objects.filter((Q(status='Complete') | Q(status='In Session')) & Q(doctor_id=doctor_id))
 	if not completed_appointments:
 		return None
+
 	completed_appointments = map(lambda x: x.time_waited, completed_appointments)
 
 	avg = sum(completed_appointments, datetime.timedelta()) / len(completed_appointments)
 	avg = str(avg).split('.')[0]
 	return avg
 
+def get_doctor_id_from_drchrono(headers):
+	users_url = 'https://drchrono.com/api/users/current'
+	data = requests.get(users_url, headers=headers).json()
+	return data['doctor']
+
 
 @login_required(login_url='/login_page')
 def index(request):
 
 	today = get_datetime_in_doctor_timezone(request)
-
 	headers = build_headers(request)
+
+	# fetch doctors id if not saved to doctor obj
+	try:
+		doctor = Doctor.objects.get(user=request.user)
+		print 'found doctor'
+	except:
+		print 'calling api'
+		doctor = Doctor(user=request.user)
+		doctor.doctor_id = get_doctor_id_from_drchrono(headers)
+		doctor.save()
+
 	patients = get_doctors_patients(headers)
-	todays_appointments = get_all_todays_appointments(headers, today)
+	todays_appointments = get_all_todays_appointments(headers, today, doctor.doctor_id)
 	content = {}
-	if todays_appointments:
-		doctor_id = todays_appointments[0].doctor_id
-		average_wait_time = get_average_wait_time(doctor_id)
-		if average_wait_time:
-			content['average_wait_time'] = average_wait_time
+	average_wait_time = get_average_wait_time(doctor.doctor_id)
+	if average_wait_time:
+		content['average_wait_time'] = average_wait_time
 
 	content['todays_appointments'] = todays_appointments
 
@@ -111,12 +126,13 @@ def build_headers(request):
 	return headers
 
 
-def get_patient_info(first_name, last_name, ssn, headers):
-	patients_url = 'https://drchrono.com/api/patients?first_name=' + first_name + '&last_name=' + last_name
+def get_patient_info(first_name, last_name, ssn, headers, doctor_id):
+	patients_url = 'https://drchrono.com/api/patients?doctor=' + str(doctor_id) + '&first_name=' + first_name + '&last_name=' + last_name
 	while patients_url:
 		data = requests.get(patients_url, headers=headers)
 		# print data.text
 		data = data.json()
+		print data
 		for patient in data['results']: # find patient matching name and ssn
 			if patient['first_name'] == first_name and patient['last_name'] == last_name and patient['social_security_number'] == ssn:
 				return patient
@@ -152,11 +168,12 @@ def checkin_patient(request):
 			first_name = checkin_form.cleaned_data['first_name'].strip()
 			last_name = checkin_form.cleaned_data['last_name'].strip()
 			ssn = checkin_form.cleaned_data['SSN'].strip()
+			doctor_id = Doctor.objects.get(user=request.user).doctor_id
 
 			print first_name, last_name, ssn
 			today = get_datetime_in_doctor_timezone(request)
 			headers = build_headers(request)
-			patient_info = get_patient_info(first_name, last_name, ssn, headers)
+			patient_info = get_patient_info(first_name, last_name, ssn, headers, doctor_id)
 			if patient_info:
 				patients_appointment = get_patients_appointment_today(patient_info['id'], headers, today)
 				if patients_appointment:
@@ -268,28 +285,28 @@ def update_demographics(request):
 def call_in_patient(request):
 	if request.method == 'POST':
 
-		try:
-			appointment_id = request.POST['appointment_id']
-			datetime_patient_saw_doc = request.POST['current_date_time']
-			datetime_patient_saw_doc = parser.parse(datetime_patient_saw_doc)
+		# try:
+		appointment_id = request.POST['appointment_id']
+		datetime_patient_saw_doc = request.POST['current_date_time']
+		datetime_patient_saw_doc = parser.parse(datetime_patient_saw_doc)
 
-			appointment = Appointment.objects.get(appointment_id=appointment_id)
-			appointment.status = "In Session"
+		appointment = Appointment.objects.get(appointment_id=appointment_id)
+		appointment.status = "In Session"
 
-			delta = datetime_patient_saw_doc - appointment.arrival_time
+		delta = datetime_patient_saw_doc - appointment.arrival_time
 
-			appointment.time_waited = delta
-			appointment.save()
+		appointment.time_waited = delta
+		appointment.save()
 
-			headers = build_headers(request)
-			change_appointment_status(appointment_id, headers, "In Session")
+		headers = build_headers(request)
+		change_appointment_status(appointment_id, headers, "In Session")
 
-			doctor_id = appointment.doctor_id
-			avg_wait_time = get_average_wait_time(doctor_id)
+		doctor_id = appointment.doctor_id
+		avg_wait_time = get_average_wait_time(doctor_id)
 
-			return JsonResponse({'status': 'success', 'avg_wait_time': avg_wait_time})
-		except:
-			return JsonResponse({'status': 'fail', 'message': 'Failed to call in patient and get new average wait time'})
+		return JsonResponse({'status': 'success', 'avg_wait_time': avg_wait_time})
+		# except:
+			# return JsonResponse({'status': 'fail', 'message': 'Failed to call in patient and get new average wait time'})
 
 
 def appointment_completed(request):
@@ -314,7 +331,7 @@ def poll_for_updates(request):
 	if request.method == 'POST':
 		try:
 			print 'polling'
-			doctor_id = request.POST['doctor_id']
+			doctor_id = Doctor.objects.get(user=request.user).doctor_id
 			updates = Arrival.objects.filter(doctor_id=doctor_id)
 			updates = map(lambda x: x.appointment_id, updates)
 

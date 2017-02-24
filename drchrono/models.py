@@ -1,5 +1,10 @@
 from django.db import models
+from django.contrib.auth.models import User
 
+
+class Doctor(models.Model):
+	user = models.OneToOneField(User)
+	doctor_id = models.IntegerField()
 
 class Patient(models.Model):
 	MALE = 'M'
@@ -24,7 +29,7 @@ class Patient(models.Model):
 class Appointment(models.Model):
 	appointment_id = models.CharField(unique=True, max_length=100)
 	patient = models.ForeignKey('Patient')
-	scheduled_time = models.DateTimeField(auto_now=False, auto_now_add=False)
+	scheduled_time = models.DateTimeField(auto_now=False, auto_now_add=False, null=True)
 	doctor_id = models.IntegerField()
 	time_waited = models.DurationField(null=True)
 	status = models.CharField(max_length=100, default='')

@@ -30,6 +30,7 @@ $( document ).ready(function() {
 
 // get time passed in seconds from text in the format 'xx hours, xx minutes'
 function get_time_seconds(time_passed) {
+	console.log(time_passed);
 	var seconds_passed = 0;
 	var hours_index = time_passed.indexOf("hour");
 	var minutes_index = time_passed.indexOf("minute");
@@ -122,12 +123,11 @@ function appointment_completed(appointment_id, csrf_token) {
 
 }
 
-function poll_for_updates(csrf_token, doctor_id) {
+function poll_for_updates(csrf_token) {
 	setInterval(function() {
 		$.post('/poll_for_updates/',
 			{
 				csrfmiddlewaretoken: csrf_token,
-				doctor_id: doctor_id
 
 			},
 			function(data){
