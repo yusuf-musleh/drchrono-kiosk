@@ -21,7 +21,6 @@ class Patient(models.Model):
 		return '%s %s %s' % (self.first_name, self.last_name, str(self.patient_id))
 
 
-
 class Appointment(models.Model):
 	appointment_id = models.CharField(unique=True, max_length=100)
 	patient = models.ForeignKey('Patient')
@@ -35,4 +34,9 @@ class Appointment(models.Model):
 		return '%s %s at %s' % (self.patient.first_name, self.patient.last_name, str(self.scheduled_time))
 
 
+class Arrival(models.Model):
+	appointment_id = models.CharField(unique=True, max_length=100)
+	doctor_id = models.IntegerField()
 
+	def __str__(self):
+		return 'Appointment ID: %s' % (self.appointment_id)

@@ -14,6 +14,18 @@ $( document ).ready(function() {
 		start_timer(timer_id, time_passed);
 	})
 
+	var csrf_token = $("#csrf_token_div").text().trim();
+
+
+	if($("#doctor_id_div").length != 0) {
+		// there are appointments today, therefore we need to poll
+		// for updates to check when patients check in
+		console.log($('doctor_id_div').text());
+		var doctor_id = $('#doctor_id_div').text().trim();
+		poll_for_updates(csrf_token, doctor_id);
+	}
+
+
 });
 
 // get time passed in seconds from text in the format 'xx hours, xx minutes'
@@ -76,7 +88,12 @@ function call_in_patient(appointment_id, csrf_token) {
 		},
 		function(data){
 			// data = $.parseJSON(data);
-			console.log(data);
+			if (data['status'] == 'success'){
+				$("#avg_wait_time_div").html("<h4> " + data['avg_wait_time'] + " </h4>");
+			}
+			else{
+				console.log(data['message']);
+			}
 		}
 	);
 
@@ -86,8 +103,6 @@ function call_in_patient(appointment_id, csrf_token) {
 
 function appointment_completed(appointment_id, csrf_token) {
 	// update status of appointment to 'complete' in db and drchrono api
-	console.log('calling completed function');
-	console.log(appointment_id);
 
 	$('#status_'+appointment_id).removeClass('alert-info').addClass('alert-warning');
 	$('#status_'+appointment_id).html('<strong>Completed<strong/>');
@@ -104,5 +119,46 @@ function appointment_completed(appointment_id, csrf_token) {
 			console.log(data);
 		}
 	);
+
+}
+
+function poll_for_updates(csrf_token, doctor_id) {
+	setInterval(function() {
+		$.post('/poll_for_updates/',
+			{
+				csrfmiddlewaretoken: csrf_token,
+				doctor_id: doctor_id
+
+			},
+			function(data){
+				if (data['status'] == 'success'){
+
+					// loop through updates and change dom accordingly
+					$.each( data['updates'], function( index, value ){
+						$('#' + value + '_arrived').html(
+								"<div class=\"col-md-3\">\
+								<div id='status_" + value + "' class=\"alert alert-success\" style=\"text-align: center\">\
+								  	<strong>Patient Arrived!</strong>\
+									<div id=\"timer_" + value + "\" class=\"badge\">00:00</div>\
+								</div>\
+							</div>\
+							<div class=\"col-md-2\">\
+								<button id=\"btn_" + value + "\" type=\"button\" class=\"btn btn-success\" onclick=\"call_in_patient('"+ value +"', '" + csrf_token + "')\">See Patient</button>\
+							</div>"
+							);
+						// $('#' + value + '_arrived').find();
+						$('#timer_'+value).timer({action:"start", seconds: 0});
+					});
+
+				}
+				else{
+					console.log(data['message'])
+				}
+
+
+			}
+		);
+
+	}, 1500);
 
 }

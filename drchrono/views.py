@@ -1,10 +1,10 @@
 from django.contrib.auth import logout as auth_logout
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 
 from .forms import CheckinForm, DemographicsForm
-from drchrono.models import Patient, Appointment
+from drchrono.models import Patient, Appointment, Arrival
 
 import json, requests, datetime, pytz
 
@@ -57,7 +57,6 @@ def get_all_todays_appointments(headers, today):
 			if created:
 				appointment_obj.time_waited = None
 			appointment_obj.status = appointment['status']
-			print appointment_obj.status
 			appointment_obj.save()
 			appointment_obj.scheduled_time = parser.parse(appointment['scheduled_time'])
 
@@ -73,10 +72,8 @@ def get_average_wait_time(doctor_id):
 		return None
 	completed_appointments = map(lambda x: x.time_waited, completed_appointments)
 
-	print completed_appointments
 	avg = sum(completed_appointments, datetime.timedelta()) / len(completed_appointments)
 	avg = str(avg).split('.')[0]
-	print 'avg', avg
 	return avg
 
 
@@ -258,7 +255,8 @@ def update_demographics(request):
 			content = {'patients_arrived_before': patients_arrived_before}
 
 			# inform doctor that patient arrived and checked-in
-			# ...
+			# adding appointment to Arrivals to be picked up on polling
+			add_to_arrivals(appointment_obj)
 			return render(request, 'checkin_complete.html', content)
 
 		return render(request, 'update_demographics.html', {'demographics_form': demographics_form})
@@ -270,23 +268,28 @@ def update_demographics(request):
 def call_in_patient(request):
 	if request.method == 'POST':
 
-		appointment_id = request.POST['appointment_id']
-		datetime_patient_saw_doc = request.POST['current_date_time']
-		datetime_patient_saw_doc = parser.parse(datetime_patient_saw_doc)
+		try:
+			appointment_id = request.POST['appointment_id']
+			datetime_patient_saw_doc = request.POST['current_date_time']
+			datetime_patient_saw_doc = parser.parse(datetime_patient_saw_doc)
 
-		appointment = Appointment.objects.get(appointment_id=appointment_id)
-		appointment.status = "In Session"
+			appointment = Appointment.objects.get(appointment_id=appointment_id)
+			appointment.status = "In Session"
 
-		delta = datetime_patient_saw_doc - appointment.arrival_time
+			delta = datetime_patient_saw_doc - appointment.arrival_time
 
-		appointment.time_waited = delta
-		appointment.save()
+			appointment.time_waited = delta
+			appointment.save()
 
-		headers = build_headers(request)
-		change_appointment_status(appointment_id, headers, "In Session")
+			headers = build_headers(request)
+			change_appointment_status(appointment_id, headers, "In Session")
 
+			doctor_id = appointment.doctor_id
+			avg_wait_time = get_average_wait_time(doctor_id)
 
-		return HttpResponse('ok')
+			return JsonResponse({'status': 'success', 'avg_wait_time': avg_wait_time})
+		except:
+			return JsonResponse({'status': 'fail', 'message': 'Failed to call in patient and get new average wait time'})
 
 
 def appointment_completed(request):
@@ -301,3 +304,24 @@ def appointment_completed(request):
 		change_appointment_status(appointment_id, headers, 'Complete')
 
 		return HttpResponse('ok')
+
+
+def add_to_arrivals(appointment_obj):
+	app, created = Arrival.objects.get_or_create(appointment_id=appointment_obj.appointment_id, doctor_id=appointment_obj.doctor_id)
+
+
+def poll_for_updates(request):
+	if request.method == 'POST':
+		try:
+			print 'polling'
+			doctor_id = request.POST['doctor_id']
+			updates = Arrival.objects.filter(doctor_id=doctor_id)
+			updates = map(lambda x: x.appointment_id, updates)
+
+			Arrival.objects.all().delete()
+			return JsonResponse({'status': 'success', 'updates': updates})
+		except:
+			return JsonResponse({'status': 'fail', 'message': 'Failed to poll'})
+		# return HttpResponse('polled')
+
+

@@ -20,4 +20,5 @@ urlpatterns = [
 
     url(r'^call_in_patient/', views.call_in_patient, name='call_in_patient'),
     url(r'^appointment_completed/', views.appointment_completed, name='appointment_completed'),
+    url(r'^poll_for_updates/', views.poll_for_updates, name='poll_for_updates'),
 ]

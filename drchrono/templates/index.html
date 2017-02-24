@@ -51,6 +51,9 @@
 	      	<div id='message_success'>
 	      	</div>
 			<h2>Welcome Dr. {{ user.last_name }}! </h2>
+			<div id='csrf_token_div' style="display: none">
+			{{ csrf_token }}
+			</div>
 			<br>
 			<div style='width:350px'>
 				<h3>Average Wait Time</h3>
@@ -58,7 +61,7 @@
 			</div>
 			{% if average_wait_time %}
 				<div class='row'>
-					<div class="col-md-9">
+					<div id='avg_wait_time_div' class="col-md-9">
 						<h4> {{ average_wait_time }} </h4>
 					</div>
 				</div>
@@ -71,6 +74,9 @@
 				<hr>
 			</div>
 			{% if todays_appointments %}
+				<div id='doctor_id_div' style="display: none">
+					{{ todays_appointments.0.doctor_id }}
+				</div>
 				{% for appointment in todays_appointments %}
 					<div class='row'>
 						<div class="col-md-6">
@@ -113,7 +119,13 @@
 							</div>
 						</div>
 
+						{% else %}
+						<div id='{{ appointment.appointment_id }}_arrived'>
+
+						</div>
+
 						{% endif %}
+
 
 					</div>
 					<hr>
