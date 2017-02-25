@@ -22,7 +22,7 @@ $( document ).ready(function() {
 		// for updates to check when patients check in
 		console.log($('doctor_id_div').text());
 		var doctor_id = $('#doctor_id_div').text().trim();
-		poll_for_updates(csrf_token, doctor_id);
+		poll_for_updates(csrf_token);
 	}
 
 
